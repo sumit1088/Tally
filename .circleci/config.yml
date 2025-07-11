@@ -55,13 +55,13 @@ jobs:
           name: Debug container contents
           command: docker-compose exec -T pharmaseek-fastapi ls -la /app
 
-      - run:
-          name: Run init script
-          command: docker-compose exec -T pharmaseek-fastapi python run_init.py
+      # - run:
+      #     name: Run init script
+      #     command: docker-compose exec -T pharmaseek-fastapi python run_init.py
 
-      - run:
-          name: Run seeder script
-          command: docker-compose exec -T pharmaseek-fastapi python run_seeder.py
+      # - run:
+      #     name: Run seeder script
+      #     command: docker-compose exec -T pharmaseek-fastapi python run_seeder.py
 
       - run:
           name: Test RQ Worker startup
