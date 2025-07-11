@@ -85,7 +85,7 @@ services:
       POSTGRES_DB: tally_db_1
     command: ["postgres", "-c", "max_connections=200"]
     ports:
-      - "10300:5432"  # 👈 HostPort:ContainerPort
+      - "10302:5432"  # 👈 HostPort:ContainerPort
     volumes:
       - dev-pgdata:/var/lib/postgresql/data
       - ./app/db/init-multiple-db.sql:/docker-entrypoint-initdb.d/init-multiple-db.sql
