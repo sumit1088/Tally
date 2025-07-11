@@ -4,7 +4,7 @@ executors:
   docker-executor:
     docker:
       - image: cimg/python:3.11
-    working_directory: ~/repo  # Make sure CircleCI checks out code into this path
+    working_directory: ~/repo
 
 jobs:
   build-and-test:
@@ -21,7 +21,7 @@ jobs:
 
       - run:
           name: Build and run services
-          command: docker-compose -f docker-compose.yml up -d --build
+          command: docker-compose up -d --build
 
       - run:
           name: Wait for PostgreSQL to be healthy
@@ -36,7 +36,7 @@ jobs:
 
             echo "Checking DB health status..."
             for i in {1..30}; do
-              STATUS=$(docker inspect --format='{{ .State.Health.Status }}' "$CONTAINER_ID" 2>/dev/null || echo "unavailable")
+              STATUS=$(docker inspect --format='{{.State.Health.Status}}' "$CONTAINER_ID" 2>/dev/null || echo "unavailable")
               echo "DB container health: $STATUS"
               if [ "$STATUS" = "healthy" ]; then
                 echo "Postgres is healthy."
@@ -52,8 +52,8 @@ jobs:
             fi
 
       - run:
-          name: Show files for debugging
-          command: docker-compose exec -T pharmaseek-fastapi ls -al /app
+          name: Debug container contents
+          command: docker-compose exec -T pharmaseek-fastapi ls -la /app
 
       - run:
           name: Run init script

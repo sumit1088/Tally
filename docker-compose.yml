@@ -1,100 +1,54 @@
-version: '3.9'
+version: "3.9"
 
 services:
+  db:
+    image: postgres:15
+    container_name: db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: tally_db_1
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   pharmaseek-fastapi:
     build:
       context: .
-      dockerfile: Dockerfile
-      target: development
-    ports:
-      - "8030:8000"
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8030 --reload
     volumes:
       - .:/app
-      - shared_tmp:/shared/tmp
+    working_dir: /app
+    ports:
+      - "8030:8030"
     environment:
+      - POSTGRES_DB=tally_db_1
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=root
-      - POSTGRES_DB=tally_db_1
       - POSTGRES_HOST=db
-      - POSTGRES_PORT=5432  # Internal Docker port
-      - SECRET_KEY=your-secret-key-here
-      - JWT_ALGORITHM=HS256
-      - ACCESS_TOKEN_EXPIRE_MINUTES=30
-      - REFRESH_TOKEN_EXPIRE_DAYS=7
-      - FIRST_SUPERUSER_EMAIL=admin@pharmaseek.com
-      - FIRST_SUPERUSER_PASSWORD=admin123
-      - DEBUG=true
-      - MINIO_ENDPOINT=192.168.1.133:8900
-      - MINIO_ACCESS_KEY=minioadmin
-      - MINIO_SECRET_KEY=minioadmin
-      - MINIO_BUCKET=pharmaseek-docs
-      - MINIO_SECURE=false
-      - REDIS_URL=redis://redis:6379
-      - BACKEND_CORS_ORIGINS=["http://localhost:5173", "http://192.168.1.53:5173", "http://192.168.1.145:5173"]
+      - POSTGRES_PORT=5432
+      - DATABASE_URL=postgresql://postgres:root@db:5432/tally_db_1
     depends_on:
-      - redis
-      - db
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      db:
+        condition: service_healthy
 
   rq-worker:
     build:
       context: .
-      dockerfile: Dockerfile
-      target: development
-    depends_on:
-      - redis
-      - pharmaseek-fastapi
-    command: >
-      sh -c "rq worker default --url $${REDIS_URL}"
-    environment:
-      - REDIS_URL=redis://redis:6379
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=root
-      - POSTGRES_DB=tally_db_1
-      - POSTGRES_HOST=db
-      - POSTGRES_PORT=5432  # Internal Docker port
-      - SECRET_KEY=your-secret-key-here
-      - JWT_ALGORITHM=HS256
-      - ACCESS_TOKEN_EXPIRE_MINUTES=30
-      - REFRESH_TOKEN_EXPIRE_DAYS=7
-      - FIRST_SUPERUSER_EMAIL=admin@pharmaseek.com
-      - FIRST_SUPERUSER_PASSWORD=admin123
-      - DEBUG=true
-      - MINIO_ENDPOINT=192.168.1.133:8900
-      - MINIO_ACCESS_KEY=minioadmin
-      - MINIO_SECRET_KEY=minioadmin
-      - MINIO_BUCKET=pharmaseek-docs
-      - MINIO_SECURE=false
-      - BACKEND_CORS_ORIGINS=["http://localhost:5173", "http://192.168.1.53:5173", "http://192.168.1.145:5173"]
+    command: rq worker
     volumes:
       - .:/app
-      - shared_tmp:/shared/tmp
-
-  redis:
-    image: redis:7
-    ports:
-      - "6380:6379"
-    volumes:
-      - redis_data:/data
-
-  db:
-    image: postgres:15
+    working_dir: /app
+    depends_on:
+      - db
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: root
-      POSTGRES_DB: tally_db_1
-    command: ["postgres", "-c", "max_connections=200", "-c", "log_connections=on"]
-    ports:
-      - "10300:5432"  # 👈 HostPort:ContainerPort
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 3s
-      retries: 10  
+      - DATABASE_URL=postgresql://postgres:root@db:5432/tally_db_1
 
 volumes:
-  redis_data:
-  shared_tmp:
-  pgdata:
+  postgres_data:
