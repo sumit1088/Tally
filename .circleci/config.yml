@@ -24,9 +24,16 @@ jobs:
           command: docker-compose -f docker-compose.yml up -d --build
 
       - run:
-          name: Wait for DB to be ready
+          name: Wait for DB from app container
           command: |
-            docker-compose run --rm db bash -c "until pg_isready -h db -U postgres; do sleep 1; done"
+            docker-compose exec -T pharmaseek-fastapi bash -c "
+              for i in {1..30}; do
+                pg_isready -h db -U postgres && exit 0
+                echo 'Waiting for PostgreSQL...'
+                sleep 2
+              done
+              echo 'PostgreSQL not ready in time' && exit 1
+            "
 
       - run:
           name: Run init script
@@ -37,13 +44,13 @@ jobs:
           command: docker-compose exec -T pharmaseek-fastapi python run_seeder.py
 
       - run:
-          name: Test RQ Worker startup
+          name: Run RQ Worker in background (test startup)
           command: docker-compose exec -T rq-worker echo "RQ Worker OK"
 
       - run:
-          name: Check FastAPI /docs health
+          name: Check service health (basic HTTP check)
           command: |
-            docker-compose exec -T pharmaseek-fastapi curl --fail http://localhost:8000/docs || (echo "FastAPI not reachable" && exit 1)
+            curl --fail http://localhost:8030/docs || (echo "FastAPI not reachable" && exit 1)
 
       - run:
           name: Shut down containers
