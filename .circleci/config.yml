@@ -27,20 +27,31 @@ jobs:
       - run:
           name: Wait for PostgreSQL to be healthy
           command: |
+            CONTAINER_ID=$(docker-compose ps -q db)
+            if [ -z "$CONTAINER_ID" ]; then
+              echo "ERROR: Could not find 'db' container. Check docker-compose configuration."
+              docker-compose ps
+              docker-compose logs db || true
+              exit 1
+            fi
+
+            echo "Checking DB health status..."
             for i in {1..30}; do
-              STATUS=$(docker inspect --format='{{json .State.Health.Status}}' $(docker-compose ps -q db))
+              STATUS=$(docker inspect --format='{{.State.Health.Status}}' "$CONTAINER_ID" 2>/dev/null || echo "unavailable")
               echo "DB container health: $STATUS"
-              if [ "$STATUS" = "\"healthy\"" ]; then
+              if [ "$STATUS" = "healthy" ]; then
                 echo "Postgres is healthy."
                 break
               fi
               sleep 2
             done
-            if [ "$STATUS" != "\"healthy\"" ]; then
-              echo "Postgres failed to start in time."
-              docker-compose logs db
+
+            if [ "$STATUS" != "healthy" ]; then
+              echo "Postgres failed to start in time. Dumping logs:"
+              docker-compose logs db || true
               exit 1
             fi
+
 
       - run:
           name: Show init-db logs (run_init.py)
