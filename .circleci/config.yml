@@ -7,7 +7,7 @@ executors:
     working_directory: ~/repo
 
 jobs:
-  build-and-init:
+  build-and-test:
     executor: docker-executor
     steps:
       - checkout
@@ -20,9 +20,8 @@ jobs:
           command: cp .env.example .env || echo ".env already exists"
 
       - run:
-          name: Build and start all services
-          command: |
-            docker-compose -f docker-compose.yml -f docker-compose-db.yml up -d --build
+          name: Build and run services
+          command: docker-compose -f docker-compose.yml up -d --build
 
       - run:
           name: Wait for PostgreSQL to be healthy
@@ -52,22 +51,29 @@ jobs:
               exit 1
             fi
 
+      - run:
+          name: Run init script
+          command: docker-compose exec -T pharmaseek-fastapi python run_init.py
 
       - run:
-          name: Show init-db logs (run_init.py)
-          command: docker-compose logs init-db
+          name: Run seeder script
+          command: docker-compose exec -T pharmaseek-fastapi python run_seeder.py
 
       - run:
-          name: Check FastAPI is up
+          name: Test RQ Worker startup
+          command: docker-compose exec -T rq-worker echo "RQ Worker started"
+
+      - run:
+          name: Check FastAPI docs endpoint
           command: |
             curl --fail http://localhost:8030/docs || (echo "FastAPI not reachable" && exit 1)
 
       - run:
-          name: Shut down containers
-          command: docker-compose -f docker-compose.yml -f docker-compose-db.yml down
+          name: Shut down all containers
+          command: docker-compose down
 
 workflows:
   version: 2
   test:
     jobs:
-      - build-and-init
+      - build-and-test
