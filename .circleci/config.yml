@@ -1,17 +1,58 @@
 version: 2.1
 
-jobs:
-  build:
+executors:
+  docker-executor:
     docker:
-      - image: cimg/node:18.17
+      - image: cimg/python:3.11  # You can change version if needed
+    working_directory: ~/repo
+
+jobs:
+  build-and-test:
+    executor: docker-executor
     steps:
       - checkout
-      - run: echo "Installing dependencies"
-      - run: npm install
-      - run: echo "Running tests"
-      - run: npm test
+
+      # Required to run Docker Compose inside CircleCI
+      - setup_remote_docker:
+          docker_layer_caching: true
+
+      # Optional: Copy env example
+      - run:
+          name: Copy .env if needed
+          command: cp .env.example .env || echo ".env already exists"
+
+      - run:
+          name: Build and run services using Docker Compose
+          command: docker-compose -f docker-compose.yml up -d --build
+
+      - run:
+          name: Wait for DB to be ready
+          command: |
+            docker-compose exec -T db bash -c "until pg_isready -U postgres; do sleep 1; done"
+
+      - run:
+          name: Run init script
+          command: docker-compose exec -T pharmaseek-fastapi python run_init.py
+
+      - run:
+          name: Run seeder script
+          command: docker-compose exec -T pharmaseek-fastapi python run_seeder.py
+
+      - run:
+          name: Run RQ Worker in background (test startup)
+          command: docker-compose exec -T rq-worker echo "RQ Worker OK"
+
+      - run:
+          name: Check service health (basic HTTP check)
+          command: |
+            curl --fail http://localhost:8030/docs || (echo "FastAPI not reachable" && exit 1)
+
+      - run:
+          name: Shut down containers
+          command: docker-compose down
 
 workflows:
-  build_and_test:
+  version: 2
+  test:
     jobs:
-      - build
+      - build-and-test
