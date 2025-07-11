@@ -70,7 +70,7 @@ jobs:
       - run:
           name: Check FastAPI docs endpoint
           command: |
-            curl --fail http://localhost:8030/docs || (echo "FastAPI not reachable" && exit 1)
+            curl --fail http://192.168.1.133:8030/docs || (echo "FastAPI not reachable" && exit 1)
 
       - run:
           name: Shut down all containers
