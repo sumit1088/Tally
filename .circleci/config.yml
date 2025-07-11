@@ -1,0 +1,17 @@
+version: 2.1
+
+jobs:
+  build:
+    docker:
+      - image: cimg/node:18.17
+    steps:
+      - checkout
+      - run: echo "Installing dependencies"
+      - run: npm install
+      - run: echo "Running tests"
+      - run: npm test
+
+workflows:
+  build_and_test:
+    jobs:
+      - build
