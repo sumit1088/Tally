@@ -57,11 +57,11 @@ jobs:
 
       - run:
           name: Run init script
-          command: docker-compose exec -T pharmaseek-fastapi python /app/run_init.py
+          command: docker-compose exec -T pharmaseek-fastapi python run_init.py
 
       - run:
           name: Run seeder script
-          command: docker-compose exec -T pharmaseek-fastapi python /app/run_seeder.py
+          command: docker-compose exec -T pharmaseek-fastapi python run_seeder.py
 
       - run:
           name: Test RQ Worker startup
