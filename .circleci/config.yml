@@ -4,7 +4,7 @@ executors:
   docker-executor:
     docker:
       - image: cimg/python:3.11
-    working_directory: ~/repo
+    working_directory: ~/repo  # Make sure CircleCI checks out code into this path
 
 jobs:
   build-and-test:
@@ -36,7 +36,7 @@ jobs:
 
             echo "Checking DB health status..."
             for i in {1..30}; do
-              STATUS=$(docker inspect --format='{{.State.Health.Status}}' "$CONTAINER_ID" 2>/dev/null || echo "unavailable")
+              STATUS=$(docker inspect --format='{{ .State.Health.Status }}' "$CONTAINER_ID" 2>/dev/null || echo "unavailable")
               echo "DB container health: $STATUS"
               if [ "$STATUS" = "healthy" ]; then
                 echo "Postgres is healthy."
@@ -52,12 +52,16 @@ jobs:
             fi
 
       - run:
+          name: Show files for debugging
+          command: docker-compose exec -T pharmaseek-fastapi ls -al /app
+
+      - run:
           name: Run init script
-          command: docker-compose exec -T pharmaseek-fastapi python run_init.py
+          command: docker-compose exec -T pharmaseek-fastapi python /app/run_init.py
 
       - run:
           name: Run seeder script
-          command: docker-compose exec -T pharmaseek-fastapi python run_seeder.py
+          command: docker-compose exec -T pharmaseek-fastapi python /app/run_seeder.py
 
       - run:
           name: Test RQ Worker startup
