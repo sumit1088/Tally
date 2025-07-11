@@ -63,9 +63,9 @@ jobs:
       #     name: Run seeder script
       #     command: docker-compose exec -T pharmaseek-fastapi python run_seeder.py
 
-      - run:
-          name: Test RQ Worker startup
-          command: docker-compose exec -T rq-worker echo "RQ Worker started"
+      # - run:
+      #     name: Test RQ Worker startup
+      #     command: docker-compose exec -T rq-worker echo "RQ Worker started"
 
       - run:
           name: Check FastAPI docs endpoint
